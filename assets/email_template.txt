@@ -6,6 +6,7 @@
                                         `._,._,'
   nf-core/fetchngs v${version}
 ----------------------------------------------------
+
 Run Name: $runName
 
 <% if (success){

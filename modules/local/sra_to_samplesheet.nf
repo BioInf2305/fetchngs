@@ -2,13 +2,14 @@
 process SRA_TO_SAMPLESHEET {
     tag "$meta.id"
 
+    conda (params.enable_conda ? '/dss/dsshome1/lxc03/ru83ced/.nextflow/assets/nf-core/fetchngs/conf/sratools.yaml' : null)
     executor 'local'
     memory 100.MB
 
     input:
-    val meta
-    val pipeline
-    val mapping_fields
+    tuple val(meta), path(fastq)
+    val   pipeline
+    val   mapping_fields
 
     output:
     tuple val(meta), path("*samplesheet.csv"), emit: samplesheet
@@ -20,19 +21,19 @@ process SRA_TO_SAMPLESHEET {
     //
 
     //  Remove custom keys needed to download the data
-    def meta_clone = meta.clone()
-    meta_clone.remove("id")
-    meta_clone.remove("fastq_1")
-    meta_clone.remove("fastq_2")
-    meta_clone.remove("md5_1")
-    meta_clone.remove("md5_2")
-    meta_clone.remove("single_end")
+    def meta_map = meta.clone()
+    meta_map.remove("id")
+    meta_map.remove("fastq_1")
+    meta_map.remove("fastq_2")
+    meta_map.remove("md5_1")
+    meta_map.remove("md5_2")
+    meta_map.remove("single_end")
 
     // Add relevant fields to the beginning of the map
     pipeline_map = [
         sample  : "${meta.id.split('_')[0..-2].join('_')}",
-        fastq_1 : meta.fastq_1,
-        fastq_2 : meta.fastq_2
+        fastq_1 : "${params.outdir}/fastq/${fastq[0]}",
+        fastq_2 : meta.single_end ? '' : "${params.outdir}/fastq/${fastq[1]}"
     ]
 
     // Add nf-core pipeline specific entries
@@ -43,7 +44,7 @@ process SRA_TO_SAMPLESHEET {
             pipeline_map << [ fasta: '' ]
         }
     }
-    pipeline_map << meta_clone
+    pipeline_map << meta_map
 
     // Create a samplesheet
     samplesheet  = pipeline_map.keySet().collect{ '"' + it + '"'}.join(",") + '\n'
